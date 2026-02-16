@@ -1,0 +1,1597 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>MiniCraft V3 — Enhanced Edition</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap');
+
+  :root{
+    --bg:#060c1a;
+    --panel:#0c1628dd;
+    --stroke:#ffffff18;
+    --text:#e8f4ff;
+    --muted:#8aa4cc;
+    --accent:#4dffb0;
+    --warn:#ffcc44;
+    --danger:#ff3d3d;
+    --water:#44aaff;
+    --px: 1px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;margin:0;background:var(--bg);font-family:'Share Tech Mono',monospace;overflow:hidden;touch-action:none;}
+  #wrap{position:fixed;inset:0;overflow:hidden;}
+  canvas{width:100%;height:100%;display:block;image-rendering:pixelated;background:#000;}
+
+  /* HUD */
+  .ui{position:absolute;inset:0;color:var(--text);pointer-events:none;}
+  .panel{background:var(--panel);border:1px solid var(--stroke);border-radius:12px;backdrop-filter:blur(10px);}
+
+  /* Top HUD */
+  .hud-top{position:absolute;left:8px;top:8px;right:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:8px 10px;}
+  .stat-group{display:flex;align-items:center;gap:4px;}
+  .stat-label{font-size:9px;font-family:'Press Start 2P',monospace;color:var(--muted);margin-right:2px;}
+  .bar-wrap{width:80px;height:10px;background:#0a0f1e;border:1px solid var(--stroke);border-radius:3px;overflow:hidden;position:relative;}
+  .bar-fill{height:100%;border-radius:2px;transition:width 0.2s;}
+  .bar-hp .bar-fill{background:linear-gradient(90deg,#ff3d3d,#ff7a7a);}
+  .bar-hunger .bar-fill{background:linear-gradient(90deg,#ffcc44,#ffee88);}
+  .bar-water .bar-fill{background:linear-gradient(90deg,#44aaff,#88ddff);}
+  .bar-xp .bar-fill{background:linear-gradient(90deg,#a0ff40,#ccff66);}
+
+  .pill-tag{padding:3px 7px;border-radius:6px;border:1px solid var(--stroke);background:#0a0f1ecc;font-size:9px;font-family:'Press Start 2P',monospace;white-space:nowrap;}
+  .pill-tag.accent{color:var(--accent);}
+  .pill-tag.warn{color:var(--warn);}
+  .pill-tag.danger{color:var(--danger);}
+  .pill-tag.water{color:var(--water);}
+
+  /* Toast */
+  .toast{position:absolute;right:8px;top:8px;width:min(300px,85vw);display:flex;flex-direction:column;gap:6px;padding-top:60px;}
+  .msg{padding:8px 10px;border-radius:10px;border:1px solid var(--stroke);background:var(--panel);font-size:10px;line-height:1.5;transition:opacity 0.3s,transform 0.3s;}
+  .msg b{color:var(--accent);}
+
+  /* Hotbar */
+  .hotbar{position:absolute;left:50%;bottom:110px;transform:translateX(-50%);display:flex;gap:4px;padding:8px;}
+  .slot{width:48px;height:48px;border-radius:10px;border:1px solid var(--stroke);background:#0a0f1e88;position:relative;display:grid;place-items:center;transition:transform 0.1s;}
+  .slot.sel{outline:2px solid var(--accent);box-shadow:0 0 14px #4dffb044;transform:translateY(-3px);}
+  .slot small{position:absolute;left:5px;top:4px;font-size:9px;font-family:'Press Start 2P',monospace;opacity:.7;}
+  .count{position:absolute;right:4px;bottom:3px;font-size:9px;font-family:'Press Start 2P',monospace;opacity:.9;}
+  .slot-icon{width:28px;height:28px;border-radius:6px;border:1px solid #0008;}
+
+  /* Screens */
+  .center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(700px,96vw);pointer-events:none;}
+  .screen{padding:20px;border-radius:18px;background:linear-gradient(180deg,#0b1528f0,#05090ef0);border:1px solid var(--stroke);backdrop-filter:blur(12px);}
+  .screen h1{margin:0 0 8px;font-family:'Press Start 2P',monospace;font-size:14px;color:var(--accent);letter-spacing:1px;}
+  .screen p{margin:6px 0;color:var(--muted);font-size:10px;line-height:1.5;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;}
+  .card{padding:12px;border-radius:12px;border:1px solid var(--stroke);background:#0a0f1e88;}
+  kbd{font-family:'Share Tech Mono',monospace;border:1px solid #ffffff33;border-bottom:2px solid #00000088;padding:1px 5px;border-radius:6px;background:#0e162688;color:var(--text);font-size:10px;}
+  .overlay{display:none;}
+  .overlay.show{display:block;}
+  .hint{font-size:10px;line-height:1.7;color:var(--muted);}
+  .hint b{color:var(--text);}
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;}
+  .ui-btn{display:inline-flex;gap:6px;align-items:center;padding:6px 10px;border-radius:8px;border:1px solid var(--stroke);background:#0a0f1e88;font-size:10px;font-family:'Share Tech Mono',monospace;}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);}
+  .dot.w{background:var(--warn);}
+  .dot.d{background:var(--danger);}
+
+  /* Inventory */
+  .inv-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-top:8px;}
+  .inv-slot{width:auto;height:52px;border-radius:8px;}
+
+  /* Recipes list */
+  .recipe-item{padding:8px 10px;border-radius:8px;border:1px solid var(--stroke);background:#0a0f1e88;margin-bottom:5px;font-size:9px;cursor:default;transition:border-color 0.15s;}
+  .recipe-item.sel{border-color:var(--accent);}
+  .recipe-item .rname{font-family:'Press Start 2P',monospace;font-size:9px;color:var(--text);margin-bottom:3px;}
+  .recipe-item .rdetail{color:var(--muted);}
+
+  /* Mobile controls */
+  .mobile-controls{position:absolute;bottom:0;left:0;right:0;height:110px;pointer-events:none;}
+  .dpad{position:absolute;bottom:10px;left:10px;pointer-events:all;}
+  .dpad-btn{position:absolute;width:44px;height:44px;border-radius:10px;background:#ffffff0f;border:1px solid var(--stroke);display:flex;align-items:center;justify-content:center;font-size:18px;user-select:none;active-opacity:.5;}
+  .dpad-btn:active{background:#ffffff22;}
+  #btn-left{left:0;top:22px;}
+  #btn-right{left:48px;top:22px;}
+  #btn-jump{left:24px;top:0;}
+  #btn-down{left:24px;top:44px;}
+
+  .action-btns{position:absolute;bottom:10px;right:10px;display:flex;flex-direction:column;gap:6px;pointer-events:all;}
+  .action-btn{width:52px;height:52px;border-radius:50%;border:1px solid var(--stroke);background:#ffffff0f;display:flex;align-items:center;justify-content:center;font-size:20px;user-select:none;}
+  .action-btn:active{background:#ffffff22;}
+
+  .quick-btns{position:absolute;bottom:68px;right:70px;display:flex;gap:6px;pointer-events:all;}
+  .qbtn{padding:6px 10px;border-radius:8px;border:1px solid var(--stroke);background:#0a0f1eaa;font-size:9px;font-family:'Press Start 2P',monospace;color:var(--text);user-select:none;}
+  .qbtn:active{background:#ffffff22;}
+
+  /* XP level badge */
+  .xp-badge{display:inline-flex;align-items:center;gap:4px;font-family:'Press Start 2P',monospace;font-size:9px;color:#a0ff40;}
+
+  /* Damage flash */
+  #dmg-flash{position:absolute;inset:0;background:#ff0000;opacity:0;pointer-events:none;transition:opacity 0.1s;}
+
+  /* Level up */
+  #level-banner{position:absolute;left:50%;top:30%;transform:translateX(-50%);font-family:'Press Start 2P',monospace;font-size:16px;color:#a0ff40;text-shadow:0 0 20px #80ff2088;opacity:0;pointer-events:none;white-space:nowrap;}
+
+  /* Scrollbar */
+  ::-webkit-scrollbar{width:4px;}
+  ::-webkit-scrollbar-track{background:#0a0f1e;}
+  ::-webkit-scrollbar-thumb{background:#ffffff22;border-radius:2px;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div id="dmg-flash"></div>
+  <div id="level-banner"></div>
+
+  <div class="ui">
+    <!-- HUD top -->
+    <div class="hud-top panel" id="hudTop">
+      <div class="stat-group">
+        <span class="stat-label">HP</span>
+        <div class="bar-wrap bar-hp"><div class="bar-fill" id="bar-hp" style="width:100%"></div></div>
+        <span class="pill-tag danger" id="hp-val">20</span>
+      </div>
+      <div class="stat-group">
+        <span class="stat-label">FOOD</span>
+        <div class="bar-wrap bar-hunger"><div class="bar-fill" id="bar-hunger" style="width:100%"></div></div>
+      </div>
+      <div class="stat-group">
+        <span class="stat-label" style="color:var(--water)">H₂O</span>
+        <div class="bar-wrap bar-water"><div class="bar-fill" id="bar-water" style="width:100%"></div></div>
+      </div>
+      <div class="stat-group">
+        <span class="stat-label" style="color:#a0ff40">XP</span>
+        <div class="bar-wrap bar-xp"><div class="bar-fill" id="bar-xp" style="width:0%"></div></div>
+        <span class="xp-badge" id="xp-level">Lv1</span>
+      </div>
+      <span class="pill-tag" id="timeTag">DAY</span>
+      <span class="pill-tag" id="modeTag">SURVIVAL</span>
+      <span class="pill-tag" style="color:#ccc;font-size:8px">I=Inv H=Help ESC=Pause</span>
+    </div>
+
+    <div class="toast" id="toast"></div>
+    <div class="hotbar panel" id="hotbar"></div>
+
+    <!-- Start screen -->
+    <div class="center overlay show" id="startScreen">
+      <div class="screen">
+        <h1>⛏ MINICRAFT V3</h1>
+        <p>Mine · Craft · Build · Fight · Survive the Night</p>
+        <div class="grid2">
+          <div class="card">
+            <div class="btn-row">
+              <span class="ui-btn"><span class="dot"></span>ENTER = Start</span>
+              <span class="ui-btn"><span class="dot w"></span>R = New World</span>
+              <span class="ui-btn"><span class="dot d"></span>ESC = Pause</span>
+            </div>
+            <p class="hint" style="margin-top:10px">
+              <b>Move:</b> A/D or ←/→<br/>
+              <b>Jump:</b> W / Space / ↑<br/>
+              <b>Sprint:</b> Shift<br/>
+              <b>Break block:</b> Hold Left Click<br/>
+              <b>Place block:</b> Right Click<br/>
+              <b>Attack:</b> Middle Click / Ctrl+Click / F key<br/>
+              <b>Eat:</b> E key<br/>
+              <b>Drink:</b> Q key (near water)<br/>
+              <b>Torch:</b> T key (quick place)<br/>
+              <b>Save:</b> O · <b>Load:</b> P
+            </p>
+          </div>
+          <div class="card">
+            <p class="hint">
+              <b>Survival Tips:</b><br/>
+              🍎 Break leaves for apples (food)<br/>
+              💧 Drink from water blocks (Q near water)<br/>
+              🌲 Chop trees → Planks → Sticks<br/>
+              🔥 Craft Coal + Stick = Torch<br/>
+              ⚔️ Iron + Stick = Sword<br/>
+              💎 Diamond → best gear<br/>
+              🧟 Zombies burn in daylight<br/>
+              💣 Creepers explode — run!<br/>
+              🏹 Skeletons shoot arrows<br/>
+              ⚠️ Build walls before night!<br/><br/>
+              <b>Water bar:</b> Drink by pressing Q near water. Dehydration hurts!
+            </p>
+          </div>
+        </div>
+        <p class="hint" style="margin-top:6px;text-align:center">📱 Mobile: Use on-screen buttons below</p>
+      </div>
+    </div>
+
+    <!-- Pause -->
+    <div class="center overlay" id="pauseScreen">
+      <div class="screen">
+        <h1>⏸ PAUSED</h1>
+        <p>The world waits for you...</p>
+        <div class="btn-row">
+          <span class="ui-btn"><span class="dot"></span>ESC = Resume</span>
+          <span class="ui-btn"><span class="dot w"></span>R = New World</span>
+          <span class="ui-btn"><span class="dot"></span>H = Help</span>
+          <span class="ui-btn"><span class="dot w"></span>O = Save</span>
+          <span class="ui-btn"><span class="dot w"></span>P = Load</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Help -->
+    <div class="center overlay" id="helpScreen">
+      <div class="screen">
+        <h1>📖 HELP</h1>
+        <div class="grid2">
+          <div class="card">
+            <p class="hint">
+              <b>Controls</b><br/>
+              Move: <kbd>A</kbd><kbd>D</kbd> · Jump: <kbd>W</kbd><kbd>Space</kbd><br/>
+              Sprint: <kbd>Shift</kbd> · Attack: <kbd>F</kbd><br/>
+              Break: Left Click (hold)<br/>
+              Place: Right Click<br/>
+              Eat: <kbd>E</kbd> · Drink: <kbd>Q</kbd><br/>
+              Torch: <kbd>T</kbd> · Hotbar: <kbd>1-9</kbd><br/>
+              Inventory: <kbd>I</kbd> · Craft: <kbd>C</kbd><br/>
+              Save: <kbd>O</kbd> · Load: <kbd>P</kbd><br/>
+              Creative: <kbd>G</kbd> (no hunger/thirst/damage)
+            </p>
+          </div>
+          <div class="card">
+            <p class="hint">
+              <b>Mobs</b><br/>
+              🧟 Zombie — slow, melee damage, burns at day<br/>
+              💣 Creeper — explodes when close, run!<br/>
+              🏹 Skeleton — shoots arrows from range<br/>
+              <br/>
+              <b>Obstacles</b><br/>
+              🪨 Boulder — blocks path, must mine<br/>
+              🌵 Cactus — damages if touched<br/>
+              💀 Spike pit — avoid in caves<br/>
+              <br/>
+              <b>Resources</b><br/>
+              Coal → Torches · Iron → Sword/Armor<br/>
+              Diamond → Diamond Sword (huge dmg)<br/>
+              Water → Drink to fill water bar
+            </p>
+          </div>
+        </div>
+        <p class="hint" style="margin-top:8px;text-align:center">Press <kbd>H</kbd> to close</p>
+      </div>
+    </div>
+
+    <!-- Inventory -->
+    <div class="center overlay" id="invScreen">
+      <div class="screen">
+        <h1>🎒 INVENTORY & CRAFTING</h1>
+        <p class="hint">Press <kbd>1-6</kbd> to select recipe · Press <kbd>C</kbd> to craft · <kbd>I</kbd> to close</p>
+        <div class="grid2">
+          <div class="card" style="overflow-y:auto;max-height:340px;">
+            <p class="hint"><b>Recipes</b></p>
+            <div id="recipes"></div>
+            <p class="hint" style="margin-top:6px">Selected: <span id="selectedRecipe" style="color:var(--accent)">-</span></p>
+          </div>
+          <div class="card" style="overflow-y:auto;max-height:340px;">
+            <p class="hint"><b>Inventory</b></p>
+            <div class="inv-grid" id="invGrid"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end .ui -->
+
+  <!-- Mobile Controls -->
+  <div class="mobile-controls" id="mobileControls">
+    <div class="dpad" id="dpad">
+      <div class="dpad-btn" id="btn-left">◀</div>
+      <div class="dpad-btn" id="btn-right">▶</div>
+      <div class="dpad-btn" id="btn-jump">▲</div>
+      <div class="dpad-btn" id="btn-down">▼</div>
+    </div>
+    <div class="quick-btns">
+      <div class="qbtn" id="mb-eat">EAT</div>
+      <div class="qbtn" id="mb-drink">DRINK</div>
+      <div class="qbtn" id="mb-torch">TORCH</div>
+      <div class="qbtn" id="mb-inv">INV</div>
+    </div>
+    <div class="action-btns">
+      <div class="action-btn" id="mb-attack">⚔️</div>
+      <div class="action-btn" id="mb-place">🟫</div>
+    </div>
+  </div>
+</div><!-- end #wrap -->
+
+<script>
+(() => {
+'use strict';
+// ============================================================
+// MiniCraft V3 — Enhanced Edition
+// Features: Full terrain, caves, ores, water bar, hunger bar,
+// XP system, leveling, 3 mob types (zombie/creeper/skeleton),
+// obstacles (boulders/cactus), expanded crafting, armor,
+// smooth physics, day/night cycle, mobile controls, save/load
+// ============================================================
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d', {alpha:false});
+function resize(){
+  const dpr = Math.max(1,Math.min(2,devicePixelRatio||1));
+  canvas.width = Math.floor(innerWidth*dpr);
+  canvas.height = Math.floor(innerHeight*dpr);
+  ctx.imageSmoothingEnabled = false;
+}
+addEventListener('resize',resize); resize();
+
+// ---------- UI refs ----------
+const barHP    = document.getElementById('bar-hp');
+const barHunger= document.getElementById('bar-hunger');
+const barWater = document.getElementById('bar-water');
+const barXP    = document.getElementById('bar-xp');
+const hpVal    = document.getElementById('hp-val');
+const xpLevel  = document.getElementById('xp-level');
+const timeTag  = document.getElementById('timeTag');
+const modeTag  = document.getElementById('modeTag');
+const toastEl  = document.getElementById('toast');
+const hotbarEl = document.getElementById('hotbar');
+const dmgFlash = document.getElementById('dmg-flash');
+const lvlBanner= document.getElementById('level-banner');
+const startScreen = document.getElementById('startScreen');
+const pauseScreen = document.getElementById('pauseScreen');
+const helpScreen  = document.getElementById('helpScreen');
+const invScreen   = document.getElementById('invScreen');
+const recipesEl   = document.getElementById('recipes');
+const selRecipeEl = document.getElementById('selectedRecipe');
+const invGridEl   = document.getElementById('invGrid');
+const mobileControls = document.getElementById('mobileControls');
+
+function updateHUD(p){
+  barHP.style.width = (p.hp/p.maxHp*100)+'%';
+  barHunger.style.width = (p.hunger/20*100)+'%';
+  barWater.style.width = (p.water/20*100)+'%';
+  const xpNeeded = xpForLevel(p.level+1);
+  barXP.style.width = (p.xp/xpNeeded*100)+'%';
+  hpVal.textContent = Math.ceil(p.hp);
+  xpLevel.textContent = 'Lv'+p.level;
+  barHunger.parentElement.style.borderColor = p.hunger<5 ? '#ffcc44' : '';
+  barWater.parentElement.style.borderColor = p.water<5 ? '#44aaff' : '';
+  barHP.parentElement.style.borderColor = p.hp<6 ? '#ff3d3d' : '';
+}
+
+function xpForLevel(l){ return 50 + (l-1)*30; }
+
+let toastQueue = [];
+function toast(msg, ms=2600){
+  const d = document.createElement('div');
+  d.className = 'msg';
+  d.innerHTML = msg;
+  toastEl.appendChild(d);
+  setTimeout(()=>{ d.style.opacity='0'; d.style.transform='translateY(-5px)'; }, ms-300);
+  setTimeout(()=>d.remove(), ms);
+}
+function show(el,on){ el.classList.toggle('show',!!on); }
+
+// ---------- Helpers ----------
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const rand=(a,b)=>a+Math.random()*(b-a);
+const randi=(a,b)=>Math.floor(rand(a,b+1));
+const sign=v=>v<0?-1:(v>0?1:0);
+const now=()=>performance.now();
+const lerp=(a,b,t)=>a+(b-a)*t;
+
+// ---------- Tiny audio ----------
+let audioCtx=null;
+function beep(freq=220,dur=0.06,type='square',vol=0.04){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const o=audioCtx.createOscillator();
+    const g=audioCtx.createGain();
+    o.type=type; o.frequency.value=freq;
+    g.gain.setValueAtTime(vol, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime+dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime+dur+0.01);
+  }catch(_){}
+}
+
+// ---------- World constants ----------
+const TILE = 16;
+const W = 380;
+const H = 150;
+const SEA = 72;
+
+const B = {
+  Air:0, Grass:1, Dirt:2, Stone:3, Wood:4, Leaves:5,
+  Sand:6, Water:7, Coal:8, Iron:9, Diamond:10, Torch:11,
+  Planks:12, Bedrock:13, Cactus:14, Gravel:15, Gold:16,
+  IronOre:9, // alias
+  // items
+  Apple:100, Stick:101, Sword:102, IronSword:103,
+  DiamondSword:104, Armor:105, WoodSword:106,
+  Axe:107, Pickaxe:108, Bread:109, Water_Bottle:110
+};
+
+const solidSet = new Set([B.Grass,B.Dirt,B.Stone,B.Wood,B.Sand,B.Coal,B.Iron,B.Diamond,B.Torch,B.Planks,B.Bedrock,B.Cactus,B.Gravel,B.Gold]);
+const breakSet = new Set([B.Grass,B.Dirt,B.Stone,B.Wood,B.Leaves,B.Sand,B.Coal,B.Iron,B.Diamond,B.Torch,B.Planks,B.Cactus,B.Gravel,B.Gold]);
+const hurtSet  = new Set([B.Cactus]);
+
+const world = new Uint16Array(W*H);
+const lightMap = new Uint8Array(W*H);
+const crackMap = new Float32Array(W*H);
+
+const idx=(x,y)=>x+y*W;
+const inb=(x,y)=>x>=0&&y>=0&&x<W&&y<H;
+function getb(x,y){ return inb(x,y)?world[idx(x,y)]:B.Bedrock; }
+function setb(x,y,v){ if(inb(x,y)) world[idx(x,y)]=v; }
+function isSolid(x,y){ return solidSet.has(getb(x,y)); }
+
+// ---------- Terrain gen ----------
+function heightNoise(x){
+  return Math.floor(SEA
+    + Math.sin(x*0.07)*7
+    + Math.sin(x*0.02+2.1)*14
+    + Math.sin(x*0.005+1.7)*18
+    + Math.sin(x*0.052+3.3)*4);
+}
+
+function caves(){
+  for(let i=0;i<16;i++){
+    let cx=randi(20,W-21), cy=randi(SEA+10,H-30);
+    const len=randi(250,440);
+    for(let k=0;k<len;k++){
+      const r=rand(1.8,3.8);
+      for(let y2=Math.floor(cy-r);y2<=Math.ceil(cy+r);y2++){
+        for(let x2=Math.floor(cx-r);x2<=Math.ceil(cx+r);x2++){
+          if(!inb(x2,y2)||getb(x2,y2)===B.Bedrock) continue;
+          if(Math.hypot(x2-cx,y2-cy)<=r*(0.8+Math.random()*0.3)) setb(x2,y2,B.Air);
+        }
+      }
+      cx+=randi(-2,2); cy+=randi(-2,2);
+      cx=clamp(cx,12,W-13); cy=clamp(cy,SEA+6,H-14);
+    }
+  }
+}
+
+function blob(block,count,yMin,yMax,rMax){
+  for(let i=0;i<count;i++){
+    const cx=randi(6,W-7), cy=randi(yMin,yMax);
+    const r=rMax*(0.6+Math.random()*0.5);
+    for(let y2=Math.floor(cy-r);y2<=Math.ceil(cy+r);y2++){
+      for(let x2=Math.floor(cx-r);x2<=Math.ceil(cx+r);x2++){
+        if(!inb(x2,y2)||getb(x2,y2)!==B.Stone) continue;
+        if(Math.hypot(x2-cx,y2-cy)<=r*(0.8+Math.random()*0.3)) setb(x2,y2,block);
+      }
+    }
+  }
+}
+
+function generateWorld(){
+  world.fill(B.Air); lightMap.fill(0); crackMap.fill(0);
+  mobs.length=0; particles.length=0; arrows.length=0;
+
+  for(let x=0;x<W;x++){
+    const h=heightNoise(x);
+    for(let y=0;y<H;y++){
+      if(y===H-1){ setb(x,y,B.Bedrock); continue; }
+      if(y>h){
+        setb(x,y, y>h+14?B.Stone:(y>h+3?B.Dirt:B.Dirt));
+      } else if(y===h){
+        setb(x,y, y<SEA-1?B.Sand:B.Grass);
+      }
+      if(y<SEA&&y>h&&y>=SEA-6) setb(x,y,B.Water);
+    }
+
+    // Trees
+    if(Math.random()<0.09){
+      const ty=h-1;
+      if(ty>10&&getb(x,ty)===B.Air&&(getb(x,ty+1)===B.Grass||getb(x,ty+1)===B.Sand)){
+        const tr=randi(4,7);
+        for(let k=0;k<tr;k++) setb(x,ty-k,B.Wood);
+        const top=ty-tr+1;
+        for(let dx=-3;dx<=3;dx++) for(let dy=-3;dy<=3;dy++){
+          if(Math.abs(dx)+Math.abs(dy)<=4&&Math.random()>0.12){
+            const lx=x+dx,ly=top+dy;
+            if(inb(lx,ly)&&getb(lx,ly)===B.Air) setb(lx,ly,B.Leaves);
+          }
+        }
+      }
+    }
+
+    // Cactus in desert zones
+    if(getb(x,h)===B.Sand&&Math.random()<0.07&&getb(x,h-1)===B.Air){
+      const ch=randi(2,4);
+      for(let k=1;k<=ch;k++) setb(x,h-k,B.Cactus);
+    }
+  }
+
+  // Gravel patches
+  blob(B.Gravel,60,SEA,SEA+20,3);
+  caves();
+  blob(B.Coal,160,SEA+6,H-14,4.2);
+  blob(B.Iron,100,SEA+12,H-14,3.3);
+  blob(B.Gold,50,SEA+18,H-16,2.8);
+  blob(B.Diamond,36,SEA+22,H-20,2.5);
+
+  toast('⛏ New world! Mine, craft, <b>survive the night!</b>');
+}
+
+// ---------- Lighting ----------
+function rebuildLight(night){
+  const sky = night ? 30 : 205;
+  for(let x=0;x<W;x++){
+    let L=sky;
+    for(let y=0;y<H;y++){
+      const b=getb(x,y);
+      const pass=b===B.Air||b===B.Leaves||b===B.Water;
+      L=Math.max(0,L-(pass?0:22));
+      lightMap[idx(x,y)]=L;
+    }
+  }
+  const stack=[];
+  for(let x=0;x<W;x++) for(let y=0;y<H;y++){
+    if(getb(x,y)===B.Torch){
+      const id=idx(x,y);
+      lightMap[id]=Math.max(lightMap[id],255);
+      stack.push(x,y,255);
+    }
+  }
+  while(stack.length){
+    const L=stack.pop(), y=stack.pop(), x=stack.pop();
+    const nL=L-36; if(nL<=0) continue;
+    for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+      const nx=x+dx,ny=y+dy;
+      if(!inb(nx,ny)) continue;
+      if(isSolid(nx,ny)&&getb(nx,ny)!==B.Torch) continue;
+      const id=idx(nx,ny);
+      if(lightMap[id]<nL){ lightMap[id]=nL; stack.push(nx,ny,nL); }
+    }
+  }
+}
+
+// ---------- Particles ----------
+const particles=[];
+function addPart(x,y,n,kind='dust',col=null){
+  for(let i=0;i<n;i++){
+    particles.push({x,y,vx:rand(-2,2),vy:rand(-3.5,-0.5),life:rand(18,38),kind,col});
+  }
+}
+
+// ---------- Arrows ----------
+const arrows=[];
+function spawnArrow(x,y,vx,vy,fromPlayer=false){
+  arrows.push({x,y,vx,vy,fromPlayer,life:220,dead:false});
+}
+
+// ---------- Player ----------
+const player = {
+  x:30, y:20, w:0.72, h:1.62,
+  vx:0, vy:0, onGround:false,
+  hp:20, maxHp:20, hunger:20, water:20,
+  xp:0, level:1,
+  armor:0, // 0-6
+  creative:false,
+  hurtT:0, atkT:0,
+  inv:{
+    [B.Dirt]:20,[B.Planks]:8,[B.Torch]:5,[B.Wood]:0,
+    [B.Stone]:0,[B.Sand]:0,[B.Coal]:0,[B.Iron]:0,
+    [B.Diamond]:0,[B.Gold]:0,[B.Apple]:4,[B.Stick]:0,
+    [B.Sword]:0,[B.IronSword]:0,[B.DiamondSword]:0,
+    [B.WoodSword]:0,[B.Armor]:0,[B.Axe]:0,[B.Pickaxe]:0,
+    [B.Bread]:0,[B.Water_Bottle]:0,[B.Gravel]:0
+  },
+  sel: B.Dirt
+};
+
+// ---------- Mobs ----------
+const mobs=[];
+function spawnZombie(x,y){ mobs.push({type:'zombie',x,y,w:0.82,h:1.64,vx:0,vy:0,onGround:false,hp:10,maxHp:10,hitT:0,t:0,dead:false}); }
+function spawnCreeper(x,y){ mobs.push({type:'creeper',x,y,w:0.76,h:1.54,vx:0,vy:0,onGround:false,hp:8,maxHp:8,hitT:0,fuse:0,dead:false}); }
+function spawnSkeleton(x,y){ mobs.push({type:'skeleton',x,y,w:0.76,h:1.74,vx:0,vy:0,onGround:false,hp:7,maxHp:7,hitT:0,shootT:0,dead:false}); }
+
+// ---------- Keys / Input ----------
+const keys=new Set();
+let mobileKeys = {left:false,right:false,jump:false,sprint:false};
+let paused=true, started=false;
+let placeCD=0;
+
+addEventListener('keydown',e=>{
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
+  keys.add(e.key.toLowerCase());
+
+  if(e.key==='Enter'&&!started){
+    started=true; paused=false;
+    show(startScreen,false);
+    toast('🌍 World loaded! Good luck surviving the night...');
+  }
+  if(e.key==='Escape'&&started){
+    if(helpScreen.classList.contains('show')){ show(helpScreen,false); return; }
+    if(invScreen.classList.contains('show')){ show(invScreen,false); return; }
+    paused=!paused;
+    show(pauseScreen,paused);
+  }
+  const k=e.key.toLowerCase();
+  if(!started) return;
+  if(k==='h'){ const on=!helpScreen.classList.contains('show'); show(helpScreen,on); if(on) show(invScreen,false); }
+  if(k==='i'){ const on=!invScreen.classList.contains('show'); show(invScreen,on); if(on){ show(helpScreen,false); rebuildInvUI(); rebuildRecUI(); } }
+  if(k==='r'){ newWorld(); }
+  if(k==='g'){ player.creative=!player.creative; toast(player.creative?'🎨 Creative mode (infinite/immortal)':'⚔️ Survival mode'); modeTag.textContent=player.creative?'CREATIVE':'SURVIVAL'; }
+  if(k==='e'){ eatItem(); }
+  if(k==='q'){ drinkWater(); }
+  if(k==='o'){ saveGame(); }
+  if(k==='p'){ loadGame(); }
+  if(k==='c'){ craftSelected(); }
+  if(k==='t'){ placeTorchNear(); }
+  if(k==='f'||k==='control'){ playerAttack(); }
+  if(/^[1-9]$/.test(e.key)) selectSlot(+e.key-1);
+  if(invScreen.classList.contains('show')&&/^[1-8]$/.test(e.key)) selectRecipe(+e.key-1);
+});
+addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
+
+let mouse={x:0,y:0,down:false,rdown:false,lastRdown:false};
+canvas.addEventListener('mousemove',e=>{
+  const r=canvas.getBoundingClientRect();
+  mouse.x=(e.clientX-r.left)/r.width*canvas.width;
+  mouse.y=(e.clientY-r.top)/r.height*canvas.height;
+});
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
+canvas.addEventListener('mousedown',e=>{
+  if(!started) return;
+  if(e.button===0) mouse.down=true;
+  if(e.button===2) mouse.rdown=true;
+  if(e.button===1) playerAttack();
+  if(e.button===0&&(keys.has('control')||keys.has('ctrl'))) playerAttack();
+});
+canvas.addEventListener('mouseup',e=>{
+  if(e.button===0) mouse.down=false;
+  if(e.button===2) mouse.rdown=false;
+});
+
+// Mobile buttons
+function setupMobileBtn(id, downFn, upFn){
+  const el=document.getElementById(id);
+  if(!el) return;
+  el.addEventListener('pointerdown',e=>{e.preventDefault(); downFn&&downFn();});
+  el.addEventListener('pointerup',e=>{e.preventDefault(); upFn&&upFn();});
+  el.addEventListener('pointercancel',e=>{e.preventDefault(); upFn&&upFn();});
+}
+setupMobileBtn('btn-left',()=>mobileKeys.left=true,()=>mobileKeys.left=false);
+setupMobileBtn('btn-right',()=>mobileKeys.right=true,()=>mobileKeys.right=false);
+setupMobileBtn('btn-jump',()=>mobileKeys.jump=true,()=>mobileKeys.jump=false);
+setupMobileBtn('btn-down',null,null);
+setupMobileBtn('mb-attack',()=>playerAttack(),null);
+setupMobileBtn('mb-eat',()=>eatItem(),null);
+setupMobileBtn('mb-drink',()=>drinkWater(),null);
+setupMobileBtn('mb-torch',()=>placeTorchNear(),null);
+setupMobileBtn('mb-inv',()=>{
+  const on=!invScreen.classList.contains('show');
+  show(invScreen,on);
+  if(on){ rebuildInvUI(); rebuildRecUI(); }
+},null);
+
+// Mobile touch: break/place on canvas
+let touchBreaking=false, touchPlacing=false;
+let touchX=0, touchY=0;
+canvas.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  if(!started) return;
+  const t=e.touches[0];
+  const r=canvas.getBoundingClientRect();
+  mouse.x=(t.clientX-r.left)/r.width*canvas.width;
+  mouse.y=(t.clientY-r.top)/r.height*canvas.height;
+  if(e.touches.length===1) mouse.down=true;
+  if(e.touches.length===2) mouse.rdown=true;
+},{passive:false});
+canvas.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  const t=e.touches[0];
+  const r=canvas.getBoundingClientRect();
+  mouse.x=(t.clientX-r.left)/r.width*canvas.width;
+  mouse.y=(t.clientY-r.top)/r.height*canvas.height;
+},{passive:false});
+canvas.addEventListener('touchend',e=>{
+  e.preventDefault();
+  mouse.down=false; mouse.rdown=false;
+},{passive:false});
+
+// Swipe hotbar on mobile
+let swipeStartX=0;
+document.addEventListener('touchstart',e=>{ swipeStartX=e.touches[0].clientX; });
+document.addEventListener('touchend',e=>{
+  const dx=e.changedTouches[0].clientX-swipeStartX;
+  if(Math.abs(dx)>60){
+    const cur=hotbarSlots.indexOf(player.sel);
+    if(dx<0) selectSlot(Math.min(cur+1,hotbarSlots.length-1));
+    else selectSlot(Math.max(cur-1,0));
+  }
+});
+
+// ---------- Hotbar ----------
+const hotbarSlots=[B.Dirt,B.Planks,B.Torch,B.Stone,B.Wood,B.Sand,B.Iron,B.WoodSword,B.IronSword];
+function selectSlot(i){
+  player.sel=hotbarSlots[clamp(i,0,hotbarSlots.length-1)];
+  rebuildHotbar(); beep(420+i*22,0.03,'square',0.03);
+}
+
+function itemName(id){
+  const names={[B.Air]:'Air',[B.Grass]:'Grass',[B.Dirt]:'Dirt',[B.Stone]:'Stone',[B.Wood]:'Wood',[B.Leaves]:'Leaves',[B.Sand]:'Sand',[B.Water]:'Water',[B.Coal]:'Coal',[B.Iron]:'Iron',[B.Diamond]:'Diamond',[B.Torch]:'Torch',[B.Planks]:'Planks',[B.Bedrock]:'Bedrock',[B.Cactus]:'Cactus',[B.Gravel]:'Gravel',[B.Gold]:'Gold',[B.Apple]:'Apple 🍎',[B.Stick]:'Stick',[B.Sword]:'Sword',[B.IronSword]:'Iron Sword ⚔️',[B.DiamondSword]:'Diamond Sword 💎',[B.WoodSword]:'Wood Sword 🪵',[B.Armor]:'Iron Armor 🛡️',[B.Axe]:'Axe 🪓',[B.Pickaxe]:'Pickaxe ⛏️',[B.Bread]:'Bread 🍞',[B.Water_Bottle]:'Water Bottle 💧',[B.Gravel]:'Gravel'};
+  return names[id]||('Item '+id);
+}
+
+function blockSwatch(b){
+  const s={[B.Grass]:'linear-gradient(#4baf3a,#2f7a25)',[B.Dirt]:'linear-gradient(#8a5a2c,#5b3417)',[B.Stone]:'linear-gradient(#9aa1a7,#6a7077)',[B.Wood]:'linear-gradient(#b98444,#8d5b2b)',[B.Planks]:'linear-gradient(#d3a45d,#b87d33)',[B.Leaves]:'linear-gradient(#3c8a2b,#2a6a1f)',[B.Sand]:'linear-gradient(#e7d28b,#c8b46f)',[B.Water]:'linear-gradient(#2d6cff,#1540a8)',[B.Coal]:'linear-gradient(#3d3d3d,#141414)',[B.Iron]:'linear-gradient(#d6cfc3,#9a948c)',[B.Diamond]:'linear-gradient(#67ffe9,#12bda8)',[B.Torch]:'linear-gradient(#ffda6b,#ff8a00)',[B.Bedrock]:'linear-gradient(#303030,#121212)',[B.Cactus]:'linear-gradient(#2a7a1a,#1a5010)',[B.Gravel]:'linear-gradient(#8a8a8a,#5a5a5a)',[B.Gold]:'linear-gradient(#ffd700,#b8860b)',[B.Apple]:'linear-gradient(#ff4444,#cc0000)',[B.Stick]:'linear-gradient(#c4822a,#8a5a1a)',[B.Sword]:'linear-gradient(#aaaaaa,#555555)',[B.IronSword]:'linear-gradient(#cccccc,#888888)',[B.DiamondSword]:'linear-gradient(#67ffe9,#12bda8)',[B.WoodSword]:'linear-gradient(#c4822a,#7a4a10)',[B.Armor]:'linear-gradient(#cccccc,#666666)',[B.Axe]:'linear-gradient(#c4822a,#555555)',[B.Pickaxe]:'linear-gradient(#888888,#333333)',[B.Bread]:'linear-gradient(#d4a24a,#a87a2a)',[B.Water_Bottle]:'linear-gradient(#44aaff,#2266cc)'};
+  return s[b]||'#0002';
+}
+
+function rebuildHotbar(){
+  hotbarEl.innerHTML='';
+  hotbarSlots.forEach((b,i)=>{
+    const d=document.createElement('div');
+    d.className='slot'+(player.sel===b?' sel':'');
+    const count=player.creative?'∞':(player.inv[b]||0);
+    d.innerHTML=`<small>${i+1}</small><div class="slot-icon" style="background:${blockSwatch(b)}"></div><div class="count">${count}</div>`;
+    hotbarEl.appendChild(d);
+  });
+}
+
+// ---------- Recipes ----------
+const recipes=[
+  {name:'Wood Planks',    out:[B.Planks,4],   in:[[B.Wood,1]]},
+  {name:'Sticks',         out:[B.Stick,4],    in:[[B.Planks,2]]},
+  {name:'Torch (x4)',     out:[B.Torch,4],    in:[[B.Coal,1],[B.Stick,1]]},
+  {name:'Wood Sword',     out:[B.WoodSword,1],in:[[B.Stick,1],[B.Planks,2]]},
+  {name:'Iron Sword ⚔️',  out:[B.IronSword,1],in:[[B.Stick,1],[B.Iron,2]]},
+  {name:'Diamond Sword 💎',out:[B.DiamondSword,1],in:[[B.Stick,1],[B.Diamond,2]]},
+  {name:'Iron Armor 🛡️',  out:[B.Armor,1],    in:[[B.Iron,5]]},
+  {name:'Pickaxe ⛏️',     out:[B.Pickaxe,1],  in:[[B.Stick,2],[B.Stone,3]]},
+  {name:'Axe 🪓',         out:[B.Axe,1],      in:[[B.Stick,2],[B.Planks,3]]},
+  {name:'Bread 🍞',       out:[B.Bread,2],    in:[[B.Wheat,3]||[B.Apple,3]]}, // wheat not in game, use apples
+  {name:'Water Bottle 💧',out:[B.Water_Bottle,1],in:[[B.Sand,2],[B.Water,0]]} // crafted near water
+];
+// Fix bread to use apples (no wheat)
+recipes[9]={name:'Apple Bread 🍞',out:[B.Bread,2],in:[[B.Apple,3]]};
+// Water bottle: just needs sand, auto-fills if near water
+recipes[10]={name:'Water Bottle 💧',out:[B.Water_Bottle,2],in:[[B.Sand,3]]};
+
+let selRecipe=0;
+function selectRecipe(i){ selRecipe=clamp(i,0,recipes.length-1); rebuildRecUI(); beep(500+selRecipe*25,0.03,'square',0.03); }
+
+function canCraft(i){
+  return recipes[i].in.every(([id,n])=>(player.inv[id]||0)>=n);
+}
+
+function craftSelected(){
+  if(!invScreen.classList.contains('show')){ toast('Open <b>Inventory (I)</b> to craft!'); return; }
+  const r=recipes[selRecipe];
+  if(!canCraft(selRecipe)){ toast('❌ Not enough materials for <b>'+r.name+'</b>'); beep(110,0.07,'sawtooth',0.04); return; }
+  r.in.forEach(([id,n])=>player.inv[id]-=n);
+  const [outId,outN]=r.out;
+  player.inv[outId]=(player.inv[outId]||0)+outN;
+  // equip armor
+  if(outId===B.Armor) player.armor=Math.min(6,player.armor+(player.inv[B.Armor]||0));
+  toast('✅ Crafted <b>'+outN+'× '+itemName(outId)+'</b>!');
+  beep(740,0.05,'square',0.04);
+  addXP(10);
+  rebuildInvUI(); rebuildRecUI(); rebuildHotbar();
+}
+
+function rebuildRecUI(){
+  recipesEl.innerHTML='';
+  recipes.forEach((r,i)=>{
+    const can=canCraft(i);
+    const d=document.createElement('div');
+    d.className='recipe-item'+(i===selRecipe?' sel':'');
+    d.style.opacity=can?'1':'0.5';
+    d.innerHTML=`<div class="rname">${i+1}. ${r.name}</div><div class="rdetail">Needs: ${r.in.map(([id,n])=>`${n}× ${itemName(id)}`).join(', ')}<br/>Gives: ${r.out[1]}× ${itemName(r.out[0])}</div>`;
+    recipesEl.appendChild(d);
+  });
+  selRecipeEl.textContent=recipes[selRecipe].name;
+}
+
+function rebuildInvUI(){
+  invGridEl.innerHTML='';
+  const ids=[B.Dirt,B.Planks,B.Torch,B.Stone,B.Wood,B.Sand,B.Coal,B.Iron,B.Diamond,B.Gold,B.Gravel,B.Cactus,B.Apple,B.Stick,B.WoodSword,B.IronSword,B.DiamondSword,B.Armor,B.Pickaxe,B.Axe,B.Bread,B.Water_Bottle];
+  ids.forEach(id=>{
+    const d=document.createElement('div');
+    d.className='slot inv-slot';
+    const count=player.inv[id]||0;
+    d.innerHTML=`<small style="font-size:7px">${itemName(id).split(' ')[0]}</small><div class="slot-icon" style="width:24px;height:24px;background:${blockSwatch(id)}"></div><div class="count">${count}</div>`;
+    invGridEl.appendChild(d);
+  });
+}
+
+// Inventory key select
+addEventListener('keydown',e=>{
+  if(!started||!invScreen.classList.contains('show')) return;
+  if(/^[1-9]$/.test(e.key)){ selectRecipe(+e.key-1); }
+});
+
+// ---------- XP system ----------
+function addXP(amount){
+  if(player.creative) return;
+  player.xp+=amount;
+  const needed=xpForLevel(player.level+1);
+  if(player.xp>=needed){
+    player.xp-=needed;
+    player.level++;
+    player.maxHp=Math.min(30,20+player.level*2);
+    player.hp=Math.min(player.hp+4,player.maxHp);
+    toast(`🌟 <b>Level Up! Now Level ${player.level}!</b> Max HP increased!`);
+    beep(880,0.15,'square',0.05);
+    showLevelBanner(player.level);
+  }
+}
+function showLevelBanner(lv){
+  lvlBanner.textContent='⭐ LEVEL '+lv+' ⭐';
+  lvlBanner.style.opacity='1';
+  lvlBanner.style.transform='translateX(-50%) scale(1.2)';
+  lvlBanner.style.transition='opacity 0.3s, transform 0.3s';
+  setTimeout(()=>{
+    lvlBanner.style.opacity='0';
+    lvlBanner.style.transform='translateX(-50%) scale(1)';
+  },2000);
+}
+
+// ---------- Spawn ----------
+function safeSpawn(){
+  const center=Math.floor(W*0.5);
+  for(let tries=0;tries<120;tries++){
+    const x=center+randi(-40,40);
+    let y=0;
+    for(let yy=0;yy<H-2;yy++){
+      if(isSolid(x,yy+1)&&getb(x,yy)===B.Air){ y=yy; break; }
+    }
+    if(y>0){
+      player.x=x+0.5; player.y=y-0.05;
+      player.vx=player.vy=0;
+      setb(x+3,y,B.Torch); setb(x-3,y,B.Torch);
+      return;
+    }
+  }
+  player.x=20; player.y=10;
+}
+
+// ---------- Physics ----------
+function rectVsWorld(x,y,w,h){
+  const x0=Math.floor(x),x1=Math.floor(x+w),y0=Math.floor(y),y1=Math.floor(y+h);
+  for(let yy=y0;yy<=y1;yy++) for(let xx=x0;xx<=x1;xx++) if(isSolid(xx,yy)) return true;
+  return false;
+}
+function move(ent,dt){
+  ent.x+=ent.vx*dt;
+  if(rectVsWorld(ent.x-ent.w/2,ent.y-ent.h,ent.w,ent.h)){
+    const s=sign(ent.vx);
+    for(let i=0;i<40;i++){ ent.x-=s*0.003; if(!rectVsWorld(ent.x-ent.w/2,ent.y-ent.h,ent.w,ent.h)) break; }
+    ent.vx=0;
+  }
+  ent.y+=ent.vy*dt;
+  ent.onGround=false;
+  if(rectVsWorld(ent.x-ent.w/2,ent.y-ent.h,ent.w,ent.h)){
+    const s=sign(ent.vy);
+    for(let i=0;i<40;i++){ ent.y-=s*0.003; if(!rectVsWorld(ent.x-ent.w/2,ent.y-ent.h,ent.w,ent.h)) break; }
+    if(s>0) ent.onGround=true;
+    ent.vy=0;
+  }
+}
+
+// ---------- Camera ----------
+function camera(){
+  const scale=3.0+(innerWidth<500?-0.5:0);
+  const vw=canvas.width/(TILE*scale), vh=canvas.height/(TILE*scale);
+  let cx=player.x-vw*0.5, cy=(player.y-1.0)-vh*0.55;
+  cx=clamp(cx,0,W-vw); cy=clamp(cy,0,H-vh);
+  return {x:cx,y:cy,w:vw,h:vh,scale};
+}
+function screenToTile(){
+  const cam=camera();
+  return {tx:Math.floor((mouse.x/canvas.width)*cam.w+cam.x),ty:Math.floor((mouse.y/canvas.height)*cam.h+cam.y)};
+}
+function distToPlayer(tx,ty){ return Math.hypot((tx+0.5)-player.x,(ty+0.5)-(player.y-player.h*0.5)); }
+function rectVsTile(px,py,pw,ph,tx,ty){ return !(px+pw/2<=tx||px-pw/2>=tx+1||py<=ty||py-ph>=ty+1); }
+
+// ---------- Mining & Placing ----------
+function breakBlock(tx,ty,dt){
+  if(!inb(tx,ty)) return;
+  const b=getb(tx,ty);
+  if(b===B.Air||b===B.Water||b===B.Bedrock||!breakSet.has(b)) return;
+  if(distToPlayer(tx,ty)>6) return;
+  const id2=idx(tx,ty);
+  let speed=player.creative?9:1.6;
+  const hasPick=(player.inv[B.Pickaxe]||0)>0;
+  const hasAxe=(player.inv[B.Axe]||0)>0;
+  if(hasPick&&(b===B.Stone||b===B.Coal||b===B.Iron||b===B.Gold||b===B.Diamond)) speed*=2.2;
+  if(hasAxe&&(b===B.Wood||b===B.Planks||b===B.Leaves)) speed*=2.0;
+  crackMap[id2]=clamp(crackMap[id2]+dt*speed,0,1);
+  addPart(tx+0.5,ty+0.5,1,'dust');
+  if(crackMap[id2]>=1){
+    crackMap[id2]=0;
+    setb(tx,ty,B.Air);
+    giveDrop(b,tx,ty);
+    beep(160,0.04,'square',0.05);
+    addPart(tx+0.5,ty+0.5,12,'pop');
+  }
+}
+
+function giveDrop(b,tx,ty){
+  if(player.creative) return;
+  let drop=b, extra=null;
+  if(b===B.Grass) drop=B.Dirt;
+  if(b===B.Leaves){
+    if(Math.random()<0.22){ extra=[B.Apple,1]; toast('🍎 Found an Apple!'); }
+    else drop=null;
+  }
+  if(drop!==null) player.inv[drop]=(player.inv[drop]||0)+1;
+  if(extra) player.inv[extra[0]]=(player.inv[extra[0]]||0)+extra[1];
+  addXP(b===B.Diamond?8:b===B.Gold?5:b===B.Iron?3:b===B.Coal?2:1);
+  rebuildHotbar();
+  if(invScreen.classList.contains('show')) rebuildInvUI();
+}
+
+function placeBlock(tx,ty){
+  if(!inb(tx,ty)||distToPlayer(tx,ty)>6) return;
+  if(getb(tx,ty)!==B.Air&&getb(tx,ty)!==B.Water) return;
+  if(rectVsTile(player.x,player.y,player.w,player.h,tx,ty)) return;
+  const b=player.sel;
+  if(!player.creative&&(player.inv[b]||0)<=0){ beep(120,0.05,'sawtooth',0.03); return; }
+  setb(tx,ty,b);
+  if(!player.creative) player.inv[b]--;
+  beep(520,0.03,'square',0.03);
+  rebuildHotbar();
+}
+
+function placeTorchNear(){
+  const px=Math.floor(player.x),py=Math.floor(player.y-0.2);
+  for(const [dx,dy] of [[0,0],[1,0],[-1,0],[0,-1],[0,1],[2,0],[-2,0]]){
+    const x=px+dx,y=py+dy;
+    if(inb(x,y)&&getb(x,y)===B.Air){
+      if(!player.creative&&(player.inv[B.Torch]||0)<=0){ toast('No torches! Craft Coal+Stick → Torch.'); return; }
+      setb(x,y,B.Torch);
+      if(!player.creative) player.inv[B.Torch]--;
+      toast('🔦 Torch placed!'); beep(760,0.04,'square',0.03);
+      rebuildHotbar(); return;
+    }
+  }
+  toast('No space for a torch here.');
+}
+
+// ---------- Eating & Drinking ----------
+function eatItem(){
+  if(player.creative) return;
+  if((player.inv[B.Bread]||0)>0){
+    player.inv[B.Bread]--; player.hunger=clamp(player.hunger+9,0,20); player.hp=clamp(player.hp+3,0,player.maxHp);
+    toast('🍞 Ate bread: +hunger +hp'); beep(320,0.05,'triangle',0.04); rebuildHotbar(); return;
+  }
+  if((player.inv[B.Apple]||0)>0){
+    player.inv[B.Apple]--; player.hunger=clamp(player.hunger+6,0,20); player.hp=clamp(player.hp+2,0,player.maxHp);
+    toast('🍎 Ate apple: +hunger +hp'); beep(280,0.05,'triangle',0.04); rebuildHotbar(); return;
+  }
+  toast('No food! Break <b>leaves</b> for apples.');
+}
+
+function drinkWater(){
+  if(player.creative) return;
+  // Check if near water block
+  const px=Math.floor(player.x),py=Math.floor(player.y);
+  let nearWater=false;
+  for(let dy=-1;dy<=1;dy++) for(let dx=-2;dx<=2;dx++) if(getb(px+dx,py+dy)===B.Water){ nearWater=true; break; }
+  if((player.inv[B.Water_Bottle]||0)>0){
+    player.inv[B.Water_Bottle]--; player.water=clamp(player.water+12,0,20);
+    toast('💧 Drank from bottle: +water'); beep(400,0.05,'sine',0.04); rebuildHotbar(); return;
+  }
+  if(nearWater){
+    player.water=clamp(player.water+8,0,20);
+    toast('💧 Drank from the water source!'); beep(400,0.05,'sine',0.04); return;
+  }
+  toast('No water nearby! Get close to water or craft a water bottle.');
+}
+
+// ---------- Combat ----------
+function flashDmg(){
+  dmgFlash.style.opacity='0.35';
+  dmgFlash.style.transition='opacity 0.05s';
+  setTimeout(()=>{ dmgFlash.style.opacity='0'; dmgFlash.style.transition='opacity 0.4s'; },80);
+}
+function hurtPlayer(amount){
+  if(player.creative||player.hurtT>0) return;
+  const actualDmg=Math.max(1,amount-Math.floor(player.armor/2));
+  player.hp=clamp(player.hp-actualDmg,0,player.maxHp);
+  player.hurtT=0.55;
+  flashDmg();
+  beep(90,0.08,'sawtooth',0.06);
+  addPart(player.x,player.y-player.h*0.5,14,'hit');
+  if(player.hp<=0){ toast('<span style="color:#ff3d3d"><b>💀 You died!</b></span> Respawning...'); respawn(); }
+}
+function respawn(){
+  player.hp=player.maxHp; player.hunger=20; player.water=20;
+  safeSpawn(); mobs.length=0;
+  toast('🔄 Respawned! Build a shelter before dark!');
+}
+
+const SWORD_DMG={[B.WoodSword]:4,[B.Sword]:5,[B.IronSword]:7,[B.DiamondSword]:12};
+function getBestSword(){
+  if((player.inv[B.DiamondSword]||0)>0) return B.DiamondSword;
+  if((player.inv[B.IronSword]||0)>0) return B.IronSword;
+  if((player.inv[B.Sword]||0)>0) return B.Sword;
+  if((player.inv[B.WoodSword]||0)>0) return B.WoodSword;
+  return null;
+}
+function playerAttack(){
+  if(!started||player.atkT>0) return;
+  player.atkT=0.30;
+  const sword=getBestSword();
+  const dmg=sword?SWORD_DMG[sword]:3;
+  const range=sword?1.6:1.2;
+  beep(sword?260:210,0.04,'square',0.04);
+  addPart(player.x,player.y-player.h*0.5,6,'hit');
+  for(const m of mobs){
+    const dx=m.x-player.x,dy=(m.y-m.h*0.5)-(player.y-player.h*0.5);
+    if(Math.hypot(dx,dy)<range){
+      m.hp-=dmg; m.hitT=0.25;
+      m.vx+=sign(dx)*1.1; m.vy-=2.5;
+      addPart(m.x,m.y-m.h*0.5,12,'hit');
+      if(m.hp<=0){ m.dead=true; addXP(m.type==='skeleton'?15:m.type==='creeper'?12:10); toast('💀 Killed a '+m.type+'!'); }
+    }
+  }
+  // Arrows hit by sword (deflect)
+  for(const a of arrows){
+    if(!a.fromPlayer){
+      const dx=a.x-player.x,dy=a.y-(player.y-player.h*0.5);
+      if(Math.hypot(dx,dy)<1.2){ a.dead=true; addPart(a.x,a.y,5,'pop'); }
+    }
+  }
+}
+
+// ---------- Time ----------
+let t=0;
+const dayLen=200;
+function isNight(){ const p=(t%dayLen)/dayLen; return p>0.6&&p<0.97; }
+function timeLabel(){ return isNight()?'🌙 NIGHT':'☀️ DAY'; }
+let spawnAcc=0;
+
+// ---------- Save/Load ----------
+function saveGame(){
+  try{
+    const data={player:{x:player.x,y:player.y,hp:player.hp,hunger:player.hunger,water:player.water,xp:player.xp,level:player.level,maxHp:player.maxHp,armor:player.armor,creative:player.creative,inv:player.inv,sel:player.sel},world:Array.from(world),t};
+    localStorage.setItem('minicraft_v3',JSON.stringify(data));
+    toast('💾 Game saved!'); beep(820,0.04,'square',0.04);
+  }catch(e){ toast('Save failed (storage issue)'); }
+}
+function loadGame(){
+  try{
+    const raw=localStorage.getItem('minicraft_v3');
+    if(!raw){ toast('No save found. Press O to save first.'); return; }
+    const data=JSON.parse(raw);
+    if(data.world?.length===W*H) for(let i=0;i<W*H;i++) world[i]=data.world[i];
+    if(data.player){ Object.assign(player,data.player); player.inv=data.player.inv||player.inv; }
+    t=data.t||0;
+    toast('📂 Game loaded!'); beep(700,0.04,'square',0.04);
+    rebuildHotbar(); rebuildLight(isNight());
+    if(invScreen.classList.contains('show')) rebuildInvUI();
+  }catch(e){ toast('Load failed.'); }
+}
+
+// ---------- Block drawing ----------
+function drawBlock(b,sx,sy,ps){
+  ctx.save(); ctx.translate(sx,sy);
+  const p=ps/16;
+  const dot=(x,y2,w2,h2,fill)=>{ ctx.fillStyle=fill; ctx.fillRect(Math.floor(x*p),Math.floor(y2*p),Math.ceil(w2*p),Math.ceil(h2*p)); };
+  switch(b){
+    case B.Air: break;
+    case B.Water:
+      ctx.fillStyle='#1c47c8'; ctx.fillRect(0,0,ps,ps);
+      for(let i=0;i<8;i++) dot(randi(0,14),randi(0,14),3,1,'#3d82ff');
+      dot(0,0,ps,ps*0.15,'#2d5fe888');
+      break;
+    case B.Grass:
+      ctx.fillStyle='#6b4a2b'; ctx.fillRect(0,0,ps,ps);
+      ctx.fillStyle='#3da831'; ctx.fillRect(0,0,ps,ps*0.35);
+      for(let i=0;i<10;i++) dot(randi(0,14),randi(0,5),1,1,Math.random()<0.5?'#2f7a25':'#55c33d');
+      for(let i=0;i<8;i++) dot(randi(0,14),randi(4,14),1,1,Math.random()<0.5?'#5b3417':'#8a5b2a');
+      break;
+    case B.Dirt:
+      ctx.fillStyle='#7a4d2a'; ctx.fillRect(0,0,ps,ps);
+      for(let i=0;i<18;i++){ dot(randi(0,14),randi(0,14),1,1,Math.random()<0.5?'#5b3417':'#9a6a3a'); }
+      break;
+    case B.Stone:
+      ctx.fillStyle='#8f98a3'; ctx.fillRect(0,0,ps,ps);
+      for(let i=0;i<12;i++) dot(randi(0,14),randi(0,14),2,1,'#6d747c');
+      dot(0,8,16,1,'#7a818a');
+      break;
+    case B.Sand:
+      ctx.fillStyle='#e6d18a'; ctx.fillRect(0,0,ps,ps);
+      for(let i=0;i<18;i++) dot(randi(0,14),randi(0,14),1,1,'#cbb46f');
+      break;
+    case B.Wood:
+      ctx.fillStyle='#a66d33'; ctx.fillRect(0,0,ps,ps);
+      for(let i=0;i<6;i++){ dot(1,i*3,14,1,'#7a4a20'); dot(1,i*3+1,14,1,'#c18a4a'); }
+      dot(0,0,1,16,'#7a4a20'); dot(15,0,1,16,'#7a4a20');
+      break;
+    case B.Planks:
+      ctx.fillStyle='#c5954f'; ctx.fillRect(0,0,ps,ps);
+      for(let y=3;y<16;y+=4) dot(0,y,16,1,'#8a5b2a');
+      dot(8,0,1,16,'#8a5b2a88');
+      break;
+    case B.Leaves:
+      ctx.fillStyle='#2f7a25'; ctx.fillRect(0,0,ps,ps);
+      for(let i=0;i<20;i++) dot(randi(0,14),randi(0,14),2,2,Math.random()<0.5?'#3f9a30':'#26641d');
+      break;
+    case B.Coal:
+      ctx.fillStyle='#7f8790'; ctx.fillRect(0,0,ps,ps);
+      for(let i=0;i<8;i++) dot(randi(2,12),randi(2,12),3,2,'#1a1a1a');
+      break;
+    case B.Iron:
+      ctx.fillStyle='#7f8790'; ctx.fillRect(0,0,ps,ps);
+      for(let i=0;i<8;i++) dot(randi(2,12),randi(2,12),3,2,'#e1d7c7');
+      break;
+    case B.Gold:
+      ctx.fillStyle='#7f8790'; ctx.fillRect(0,0,ps,ps);
+      for(let i=0;i<8;i++) dot(randi(2,12),randi(2,12),3,2,'#ffd700');
+      dot(7,7,3,2,'#ffee55');
+      break;
+    case B.Diamond:
+      ctx.fillStyle='#7f8790'; ctx.fillRect(0,0,ps,ps);
+      for(let i=0;i<7;i++){ dot(randi(2,12),randi(2,12),2,2,'#25f5d6'); }
+      dot(7,7,2,2,'#afffed');
+      break;
+    case B.Torch:
+      ctx.fillStyle='transparent'; ctx.fillRect(0,0,ps,ps);
+      dot(7,5,2,9,'#8a5b2a');
+      dot(6,2,4,4,'#ffb400');
+      dot(7,1,2,2,'#ffe06a');
+      dot(6,0,4,3,'#ffee88aa');
+      break;
+    case B.Cactus:
+      ctx.fillStyle='#1d6b12'; ctx.fillRect(0,0,ps,ps);
+      dot(1,0,1,16,'#0e4a0a'); dot(14,0,1,16,'#0e4a0a');
+      dot(0,4,3,2,'#2d9a1e'); dot(0,10,3,2,'#2d9a1e');
+      dot(13,6,3,2,'#2d9a1e'); dot(13,12,3,2,'#2d9a1e');
+      dot(7,0,2,16,'#35ba22');
+      break;
+    case B.Gravel:
+      ctx.fillStyle='#7c7c7c'; ctx.fillRect(0,0,ps,ps);
+      for(let i=0;i<14;i++) dot(randi(0,14),randi(0,14),2,2,Math.random()<0.5?'#555':'#999');
+      break;
+    case B.Bedrock:
+      ctx.fillStyle='#2a2a2a'; ctx.fillRect(0,0,ps,ps);
+      for(let i=0;i<22;i++) dot(randi(0,14),randi(0,14),2,2,Math.random()<0.5?'#151515':'#3a3a3a');
+      break;
+    default:
+      ctx.fillStyle='#ff00ff'; ctx.fillRect(0,0,ps,ps); break;
+  }
+  ctx.restore();
+}
+
+// ---------- Draw entities ----------
+function drawPlayer(cam,ps){
+  const sx=Math.floor((player.x-cam.x)*ps);
+  const sy=Math.floor((player.y-cam.y)*ps);
+  const pw=Math.floor(player.w*ps), ph=Math.floor(player.h*ps);
+  const hurt=player.hurtT>0;
+
+  // shadow
+  ctx.globalAlpha=0.2; ctx.fillStyle='#000';
+  ctx.fillRect(sx-pw/2+2,sy-ph+8,pw,ph); ctx.globalAlpha=1;
+
+  // legs (walk animation)
+  const legSwing=Math.sin(t*14*(Math.abs(player.vx)>0.3?1:0))*3;
+  ctx.fillStyle=hurt?'#ff6060':'#1a3a8a';
+  ctx.fillRect(sx-pw/2,       sy-Math.floor(ph*0.45), Math.floor(pw*0.44), Math.floor(ph*0.45));
+  ctx.fillRect(sx+Math.floor(pw*0.06), sy-Math.floor(ph*0.45), Math.floor(pw*0.44), Math.floor(ph*0.45));
+
+  // body
+  ctx.fillStyle=hurt?'#ff8888':(player.armor>0?'#8899cc':'#3d6cff');
+  ctx.fillRect(sx-pw/2, sy-ph, pw, Math.floor(ph*0.55));
+
+  // armor glint
+  if(player.armor>0){
+    ctx.fillStyle='#ffffffaa';
+    ctx.fillRect(sx-pw/2+2,sy-ph+2,pw-4,3);
+  }
+
+  // head
+  ctx.fillStyle=hurt?'#ffaaaa':'#ffd45a';
+  ctx.fillRect(sx-pw/2, sy-ph, pw, Math.floor(ph*0.35));
+  // eyes
+  ctx.fillStyle='#000';
+  ctx.fillRect(sx-Math.floor(pw*0.25),sy-ph+Math.floor(ph*0.1),4,4);
+  ctx.fillRect(sx+Math.floor(pw*0.08),sy-ph+Math.floor(ph*0.1),4,4);
+  // smile
+  ctx.fillRect(sx-Math.floor(pw*0.12),sy-ph+Math.floor(ph*0.22),Math.floor(pw*0.24),2);
+
+  // sword arm
+  if(player.atkT>0){
+    ctx.fillStyle='#cccccc';
+    ctx.fillRect(sx+pw/2-2,sy-ph+Math.floor(ph*0.2),3,Math.floor(ph*0.4));
+    ctx.fillRect(sx+pw/2,  sy-ph+Math.floor(ph*0.15),6,3);
+  }
+}
+
+function drawMob(m,cam,ps){
+  const sx=Math.floor((m.x-cam.x)*ps);
+  const sy=Math.floor((m.y-cam.y)*ps);
+  const mw=Math.floor(m.w*ps), mh=Math.floor(m.h*ps);
+  const hit=m.hitT>0;
+
+  // shadow
+  ctx.globalAlpha=0.2; ctx.fillStyle='#000';
+  ctx.fillRect(sx-mw/2+2,sy-mh+6,mw,mh); ctx.globalAlpha=1;
+
+  if(m.type==='zombie'){
+    ctx.fillStyle=hit?'#ff4444':'#1b6f2a';
+    ctx.fillRect(sx-mw/2,sy-mh+Math.floor(mh*0.35),mw,Math.floor(mh*0.65));
+    ctx.fillStyle=hit?'#ff9999':'#39c04a';
+    ctx.fillRect(sx-mw/2,sy-mh,mw,Math.floor(mh*0.35));
+    // zombie arms (outstretched)
+    ctx.fillStyle=hit?'#ff4444':'#1b6f2a';
+    ctx.fillRect(sx-mw/2-6,sy-mh+Math.floor(mh*0.15),6,Math.floor(mh*0.3));
+    ctx.fillRect(sx+mw/2,sy-mh+Math.floor(mh*0.15),6,Math.floor(mh*0.3));
+    // eyes (glowing red)
+    ctx.fillStyle=hit?'#ff0':'#ff2222';
+    ctx.fillRect(sx-Math.floor(mw*0.22),sy-mh+Math.floor(mh*0.1),4,4);
+    ctx.fillRect(sx+Math.floor(mw*0.1),sy-mh+Math.floor(mh*0.1),4,4);
+    // hp bar
+    drawMobHP(m,sx,sy,mw,mh);
+  }
+
+  if(m.type==='creeper'){
+    ctx.fillStyle=hit?'#ff4444':'#0f7f2b';
+    ctx.fillRect(sx-mw/2,sy-mh+Math.floor(mh*0.28),mw,Math.floor(mh*0.72));
+    ctx.fillStyle=hit?'#ff9999':(m.fuse>0.8?'#ffffff':'#39ff6a');
+    ctx.fillRect(sx-mw/2,sy-mh,mw,Math.floor(mh*0.28));
+    // creeper face
+    ctx.fillStyle='#000';
+    ctx.fillRect(sx-Math.floor(mw*0.22),sy-mh+Math.floor(mh*0.06),5,5);
+    ctx.fillRect(sx+Math.floor(mw*0.1),sy-mh+Math.floor(mh*0.06),5,5);
+    ctx.fillRect(sx-Math.floor(mw*0.1),sy-mh+Math.floor(mh*0.16),Math.floor(mw*0.2),3);
+    ctx.fillRect(sx-Math.floor(mw*0.18),sy-mh+Math.floor(mh*0.19),5,3);
+    ctx.fillRect(sx+Math.floor(mw*0.1),sy-mh+Math.floor(mh*0.19),5,3);
+    // fuse bar
+    if(m.fuse>0){
+      ctx.fillStyle='#ffd700'; ctx.fillRect(sx-mw/2,sy-mh-8,Math.floor(mw*clamp(m.fuse/1.6,0,1)),4);
+    }
+    drawMobHP(m,sx,sy,mw,mh);
+  }
+
+  if(m.type==='skeleton'){
+    ctx.fillStyle=hit?'#ffeecc':'#e0d8c0';
+    ctx.fillRect(sx-mw/2,sy-mh+Math.floor(mh*0.35),mw,Math.floor(mh*0.65));
+    ctx.fillStyle=hit?'#ffffaa':'#f0ead5';
+    ctx.fillRect(sx-mw/2,sy-mh,mw,Math.floor(mh*0.35));
+    // skeleton bone-style lines
+    ctx.fillStyle='#b0a890';
+    ctx.fillRect(sx-1,sy-mh,2,mh); // spine
+    ctx.fillRect(sx-mw/2,sy-mh+Math.floor(mh*0.4),mw,2); // ribs
+    // skull eyes
+    ctx.fillStyle='#000';
+    ctx.fillRect(sx-Math.floor(mw*0.22),sy-mh+Math.floor(mh*0.08),5,5);
+    ctx.fillRect(sx+Math.floor(mw*0.1),sy-mh+Math.floor(mh*0.08),5,5);
+    // bow
+    ctx.strokeStyle=hit?'#ff8844':'#8B5E3C';
+    ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.arc(sx+mw/2+4, sy-mh+Math.floor(mh*0.3), 8, -Math.PI*0.6, Math.PI*0.6);
+    ctx.stroke();
+    ctx.lineWidth=1;
+    ctx.beginPath();
+    ctx.moveTo(sx+mw/2+4, sy-mh+Math.floor(mh*0.3)-8);
+    ctx.lineTo(sx+mw/2+4, sy-mh+Math.floor(mh*0.3)+8);
+    ctx.stroke();
+    drawMobHP(m,sx,sy,mw,mh);
+  }
+}
+
+function drawMobHP(m,sx,sy,mw,mh){
+  if(m.hp>=m.maxHp) return;
+  ctx.fillStyle='#222'; ctx.fillRect(sx-mw/2-1,sy-mh-14,mw+2,6);
+  ctx.fillStyle=m.hp<m.maxHp*0.3?'#ff3333':'#44dd44';
+  ctx.fillRect(sx-mw/2,sy-mh-13,Math.floor((mw)*(m.hp/m.maxHp)),4);
+}
+
+// ---------- Main update ----------
+function update(dt){
+  t+=dt;
+  const night=isNight();
+  timeTag.textContent=timeLabel();
+  timeTag.className='pill-tag '+(night?'warn':'accent');
+
+  // Hunger drain
+  if(!player.creative){
+    const moving=Math.abs(player.vx)>0.5||Math.abs(player.vy)>1;
+    player.hunger=clamp(player.hunger-(moving?0.011:0.006)*dt*60,0,20);
+    player.water=clamp(player.water-0.008*dt*60,0,20);
+    if(player.hunger<=0&&Math.random()<dt*0.5) hurtPlayer(1);
+    if(player.water<=0&&Math.random()<dt*0.4) hurtPlayer(1);
+    if(player.hunger>15&&player.hp<player.maxHp&&Math.random()<dt*0.25) player.hp=clamp(player.hp+0.5,0,player.maxHp);
+  }
+
+  // Controls
+  const left  = keys.has('a')||keys.has('arrowleft')||mobileKeys.left;
+  const right = keys.has('d')||keys.has('arrowright')||mobileKeys.right;
+  const jump  = keys.has('w')||keys.has('arrowup')||keys.has(' ')||mobileKeys.jump;
+  const sprint= keys.has('shift')||mobileKeys.sprint;
+
+  const accel=(sprint?18:12)*(player.onGround?1:0.7);
+  const maxSp=sprint?6.2:4.2;
+  if(left)  player.vx-=accel*dt;
+  if(right) player.vx+=accel*dt;
+  if(!left&&!right) player.vx*=player.onGround?(1-10*dt):(1-2*dt);
+  player.vx=clamp(player.vx,-maxSp,maxSp);
+  if(jump&&player.onGround){ player.vy=-7.8; beep(320,0.025,'square',0.02); }
+  player.vy=clamp(player.vy+22*dt,-20,20);
+  move(player,dt);
+
+  // Cactus damage
+  {const bx=Math.floor(player.x),by=Math.floor(player.y-0.5);
+  if(getb(bx,by)===B.Cactus||getb(bx+1,by)===B.Cactus||getb(bx-1,by)===B.Cactus) hurtPlayer(1);}
+
+  // Mining/placing
+  const {tx,ty}=screenToTile();
+  if(mouse.down) breakBlock(tx,ty,dt);
+  placeCD=Math.max(0,placeCD-dt);
+  if(mouse.rdown&&placeCD<=0){ placeBlock(tx,ty); placeCD=0.22; }
+
+  // Crack decay
+  for(let i=0;i<crackMap.length;i++) if(crackMap[i]>0) crackMap[i]=Math.max(0,crackMap[i]-dt*0.8);
+
+  // Mob spawn
+  spawnAcc+=dt;
+  if(spawnAcc>1.3){
+    spawnAcc=0;
+    if(night&&mobs.length<24&&Math.random()<0.85){
+      const cam=camera();
+      const side=Math.random()<0.5?-1:1;
+      const mx=Math.floor(side<0?cam.x+1:cam.x+cam.w-2);
+      let my=0;
+      for(let y=0;y<H-2;y++) if(isSolid(mx,y+1)&&getb(mx,y)===B.Air){ my=y; break; }
+      const far=Math.hypot((mx+0.5)-player.x,(my+0.5)-(player.y-player.h*0.5))>12;
+      if(my>0&&far){
+        const r=Math.random();
+        if(r<0.45) spawnZombie(mx+0.5,my+0.05);
+        else if(r<0.75) spawnCreeper(mx+0.5,my+0.05);
+        else spawnSkeleton(mx+0.5,my+0.05);
+      }
+    }
+  }
+
+  // Update mobs
+  for(const m of mobs){
+    if(m.dead) continue;
+    const dx=player.x-m.x, dy=(player.y-player.h*0.5)-(m.y-m.h*0.5);
+    const dist=Math.hypot(dx,dy);
+    const chasing=dist<20;
+    const speed=m.type==='creeper'?3.4:m.type==='skeleton'?2.8:3.1;
+
+    // Pathfinding: simple obstacle avoidance + jump
+    if(chasing){
+      m.vx+=sign(dx)*speed*dt*7;
+      // Jump obstacle
+      if(m.onGround&&dist<6&&Math.random()<dt*0.8){
+        const fx=Math.floor(m.x+sign(dx)*0.8),fy=Math.floor(m.y-0.3);
+        if(isSolid(fx,fy)) m.vy=-6.8;
+      }
+    } else {
+      if(Math.random()<dt*0.5) m.vx+=rand(-1,1)*5*dt;
+    }
+
+    m.vy=clamp(m.vy+22*dt,-20,20);
+    m.vx=clamp(m.vx*(1-2.5*dt),-4.5,4.5);
+    move(m,dt);
+
+    // Mob attacks
+    if(m.type==='zombie'){
+      if(dist<1.1&&Math.random()<dt*2) hurtPlayer(2);
+      if(!night){
+        const lx=clamp(Math.floor(m.x),0,W-1),ly=clamp(Math.floor(m.y-1),0,H-1);
+        if(lightMap[idx(lx,ly)]>160&&Math.random()<dt*0.8){ m.hp-=0.8; addPart(m.x,m.y-m.h*0.5,2,'hit'); }
+      }
+    } else if(m.type==='creeper'){
+      if(dist<2.4){ m.fuse=Math.min(1.6,m.fuse+dt); beep(160+Math.floor(m.fuse*90),0.01,'square',0.01);
+        if(m.fuse>=1.6){ explode(m.x,m.y-0.8,3.5); m.dead=true; }
+      } else m.fuse=Math.max(0,m.fuse-dt*1.5);
+    } else if(m.type==='skeleton'){
+      m.shootT=Math.max(0,m.shootT-dt);
+      if(dist<14&&dist>2&&chasing&&m.shootT<=0&&m.onGround){
+        m.shootT=2.8;
+        const ady=dy/dist, adx=dx/dist;
+        spawnArrow(m.x+adx,m.y-m.h*0.5+ady,adx*9+rand(-0.3,0.3),ady*9-2.5);
+        beep(440,0.04,'square',0.03);
+      }
+    }
+    m.hitT=Math.max(0,m.hitT-dt);
+    if(m.hp<=0) m.dead=true;
+  }
+  for(let i=mobs.length-1;i>=0;i--) if(mobs[i].dead) mobs.splice(i,1);
+
+  // Update arrows
+  for(const a of arrows){
+    a.vy+=18*dt; // gravity
+    a.x+=a.vx*dt; a.y+=a.vy*dt;
+    a.life-=dt*60;
+    // hit world
+    const ax=Math.floor(a.x),ay=Math.floor(a.y);
+    if(isSolid(ax,ay)){ a.dead=true; addPart(a.x,a.y,3,'pop'); }
+    // hit player
+    if(!a.fromPlayer){
+      const dx=a.x-player.x,dy=a.y-(player.y-player.h*0.5);
+      if(Math.hypot(dx,dy)<0.7){ a.dead=true; hurtPlayer(3); }
+    }
+    if(a.life<=0) a.dead=true;
+  }
+  for(let i=arrows.length-1;i>=0;i--) if(arrows[i].dead) arrows.splice(i,1);
+
+  // Particles
+  for(const p of particles){
+    p.vy+=18*dt; p.x+=p.vx*dt; p.y+=p.vy*dt; p.life-=60*dt;
+  }
+  for(let i=particles.length-1;i>=0;i--) if(particles[i].life<=0) particles.splice(i,1);
+
+  // Timers
+  player.hurtT=Math.max(0,player.hurtT-dt);
+  player.atkT=Math.max(0,player.atkT-dt);
+
+  // Rebuild light
+  if(Math.floor(t*7)!==Math.floor((t-dt)*7)) rebuildLight(night);
+
+  updateHUD(player);
+  rebuildHotbar();
+}
+
+function explode(x,y,r){
+  addPart(x,y,50,'hit');
+  beep(60,0.14,'sawtooth',0.07);
+  const cx=Math.floor(x),cy=Math.floor(y);
+  for(let ty=cy-Math.ceil(r);ty<=cy+Math.ceil(r);ty++){
+    for(let tx=cx-Math.ceil(r);tx<=cx+Math.ceil(r);tx++){
+      if(!inb(tx,ty)) continue;
+      const d=Math.hypot((tx+0.5)-x,(ty+0.5)-y);
+      if(d<=r*(0.8+Math.random()*0.3)){
+        const bb=getb(tx,ty);
+        if(bb!==B.Bedrock&&bb!==B.Water&&bb!==B.Air) setb(tx,ty,B.Air);
+      }
+    }
+  }
+  const pd=Math.hypot(player.x-x,(player.y-player.h*0.5)-y);
+  if(pd<r+1.5) hurtPlayer(7);
+  toast('<span style="color:#ff3d3d"><b>💥 BOOM! Creeper exploded!</b></span>');
+}
+
+// ---------- Render ----------
+function render(){
+  const cam=camera();
+  const ps=TILE*cam.scale;
+  const wTiles=Math.ceil(cam.w)+2, hTiles=Math.ceil(cam.h)+2;
+  const sx0=Math.floor(cam.x), sy0=Math.floor(cam.y);
+  const night=isNight();
+
+  // Sky gradient
+  const g=ctx.createLinearGradient(0,0,0,canvas.height);
+  if(night){ g.addColorStop(0,'#04071a'); g.addColorStop(1,'#080d1e'); }
+  else{ g.addColorStop(0,'#5ca5ff'); g.addColorStop(1,'#bde8ff'); }
+  ctx.fillStyle=g; ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // Stars
+  if(night){
+    const starAlpha = Math.min(1,(((t%dayLen)/dayLen)-0.6)/0.05);
+    ctx.globalAlpha=starAlpha*0.9;
+    for(let i=0;i<180;i++){
+      const sx=(i*197+31)%canvas.width, sy=(i*103+17)%(canvas.height*0.6);
+      const blink=0.5+0.5*Math.sin(t*1.5+i);
+      ctx.fillStyle=`rgba(255,255,255,${blink})`;
+      ctx.fillRect(sx,sy,i%3===0?2:1,i%3===0?2:1);
+    }
+    // Moon
+    ctx.fillStyle='#e8e0c0'; ctx.globalAlpha=0.85;
+    ctx.beginPath(); ctx.arc(canvas.width*0.82,60,18,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#c8bfa8'; ctx.beginPath(); ctx.arc(canvas.width*0.82-6,54,10,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1;
+  } else {
+    // Sun
+    ctx.fillStyle='#ffe060'; ctx.globalAlpha=0.9;
+    ctx.beginPath(); ctx.arc(canvas.width*0.15,55,22,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#fff8a0'; ctx.globalAlpha=0.5;
+    ctx.beginPath(); ctx.arc(canvas.width*0.15,55,30,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1;
+  }
+
+  // Tiles
+  for(let y=0;y<hTiles;y++){
+    for(let x=0;x<wTiles;x++){
+      const tx=sx0+x, ty=sy0+y;
+      if(!inb(tx,ty)) continue;
+      const b=getb(tx,ty); if(b===B.Air) continue;
+      const px=Math.floor((tx-cam.x)*ps), py=Math.floor((ty-cam.y)*ps);
+      drawBlock(b,px,py,ps);
+      // crack overlay
+      const prog=crackMap[idx(tx,ty)];
+      if(prog>0){
+        ctx.globalAlpha=0.6; ctx.fillStyle='#000';
+        for(let c=0;c<Math.floor(prog*5);c++) ctx.fillRect(px+randi(0,ps-1),py+randi(0,ps-1),2,2);
+        ctx.fillRect(px,py,ps*prog,ps*0.07); ctx.globalAlpha=1;
+      }
+    }
+  }
+
+  // Arrows
+  for(const a of arrows){
+    const ax=Math.floor((a.x-cam.x)*ps), ay=Math.floor((a.y-cam.y)*ps);
+    ctx.fillStyle='#d4a040'; ctx.globalAlpha=0.9;
+    const angle=Math.atan2(a.vy,a.vx);
+    ctx.save(); ctx.translate(ax,ay); ctx.rotate(angle);
+    ctx.fillRect(-8,-1,16,2);
+    ctx.fillStyle='#888'; ctx.fillRect(-8,-1,3,2);
+    ctx.restore(); ctx.globalAlpha=1;
+  }
+
+  // Mobs
+  for(const m of mobs) drawMob(m,cam,ps);
+  drawPlayer(cam,ps);
+
+  // Particles
+  for(const p of particles){
+    const px2=Math.floor((p.x-cam.x)*ps), py2=Math.floor((p.y-cam.y)*ps);
+    ctx.globalAlpha=clamp(p.life/38,0,1);
+    ctx.fillStyle=p.col||(p.kind==='hit'?'#ff4d4d':p.kind==='pop'?'#ffffff':'#3a2a1a');
+    ctx.fillRect(px2,py2,3,3);
+    ctx.globalAlpha=1;
+  }
+
+  // Lighting overlay
+  ctx.save(); ctx.globalCompositeOperation='multiply';
+  for(let y=0;y<hTiles;y++){
+    for(let x=0;x<wTiles;x++){
+      const tx=sx0+x, ty=sy0+y;
+      if(!inb(tx,ty)) continue;
+      const L=lightMap[idx(tx,ty)]/255;
+      const shade=clamp(1-L,0,0.94);
+      if(shade<=0.02) continue;
+      const px=Math.floor((tx-cam.x)*ps), py=Math.floor((ty-cam.y)*ps);
+      ctx.fillStyle=`rgba(0,0,0,${shade})`;
+      ctx.fillRect(px,py,ps+1,ps+1);
+    }
+  }
+  ctx.restore();
+
+  // Target cursor
+  const {tx:ttx,ty:tty}=screenToTile();
+  const cx=Math.floor((ttx+0.5-cam.x)*ps), cy=Math.floor((tty+0.5-cam.y)*ps);
+  ctx.globalAlpha=0.7; ctx.strokeStyle='#fff'; ctx.lineWidth=2;
+  ctx.strokeRect(Math.floor((ttx-cam.x)*ps)+1,Math.floor((tty-cam.y)*ps)+1,ps-2,ps-2);
+  ctx.globalAlpha=1;
+
+  // Pause dim
+  if(paused&&started){ ctx.globalAlpha=0.3; ctx.fillStyle='#000'; ctx.fillRect(0,0,canvas.width,canvas.height); ctx.globalAlpha=1; }
+}
+
+// ---------- World reset ----------
+function newWorld(){
+  mobs.length=0; particles.length=0; arrows.length=0;
+  generateWorld(); safeSpawn(); rebuildLight(false);
+  toast('🌎 New world! Press <b>O</b> to save your progress!');
+}
+
+// ---------- Init ----------
+function init(){
+  generateWorld(); safeSpawn(); rebuildLight(false);
+  updateHUD(player); rebuildHotbar(); rebuildInvUI(); rebuildRecUI();
+  toast('⚡ Press <b>Enter</b> or tap the screen to begin!');
+}
+
+// ---------- Game Loop ----------
+let last=now();
+function loop(){
+  const cur=now();
+  let dt=Math.min((cur-last)/1000,0.04);
+  last=cur;
+  if(started&&!paused) update(dt);
+  render();
+  requestAnimationFrame(loop);
+}
+
+// Tap to start on mobile
+canvas.addEventListener('touchstart',e=>{
+  if(!started){ started=true; paused=false; show(startScreen,false); toast('🌍 Welcome! Build a shelter before nightfall!'); }
+},{once:true,passive:true});
+
+init();
+requestAnimationFrame(loop);
+
+})();
+</script>
+</body>
+</html>
